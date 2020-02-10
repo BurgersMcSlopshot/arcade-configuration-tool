@@ -37,9 +37,21 @@ function ensureFileListener(applicationName: string, fileName: string, action: F
     applicationFileListeners[applicationName][fileName] = action;
 }
 
-export function subscribe(filename: string, applicationName: string, action: FileWatchAction) {
+export function subscribe(applicationName: string, filename: string, action: FileWatchAction) {
     if(fileWatches[filename] === undefined) {
         fileWatches[filename] = fs.watch(filename)
     }
     ensureFileListener(applicationName, filename, action);
 }
+
+export function unsubscribe(applicationName: string, filename: string) {
+    if(applicationFileListeners[applicationName] && applicationFileListeners[applicationName][filename]) {
+        removeApplicationFileListener(filename, applicationFileListeners[applicationName][filename]);
+    } else {
+        console.warn(`Cannot unsubscribe from ${applicationName}:${filename}: does not appear to have subscription.`);
+    }
+}
+
+export function unsubscribeAll(applicationName: string) {
+    removeApplicationFileListeners(applicationName)
+} 
