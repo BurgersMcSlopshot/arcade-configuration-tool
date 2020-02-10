@@ -3,7 +3,7 @@ export interface ApplicationArgs {
     environment: string,
     applicationsDirectory: string,
     groupVarsDirectory: string,
-    additionalConfigurationParameters?: {[key: string]: string | boolean},
+    additionalConfigurationParameters?: {[key: string]: string},
 };
 
 export interface Configuration {

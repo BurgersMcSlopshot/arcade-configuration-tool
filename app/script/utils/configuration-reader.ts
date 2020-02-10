@@ -63,11 +63,11 @@ class ConfigurationValue {
     }
 }
 
-type valueResolverFactory = (template: Template) => (config: ConfigurationValueOld, resolvingDependencies: {[key: string]: boolean}) => string 
+type valueResolverFactory = (template: Template) => (config: ConfigurationValueOld, additionalDependencies?: {[key:string]: string}, resolvingDependencies?: {[key: string]: boolean}) => string 
 
 const DEFAULT_RESOLVING_DEPENDENCIES: {[key: string]: boolean} = {};
 
-const makeValueResolver: valueResolverFactory = (template) => (config, resolvingDependencies = {...DEFAULT_RESOLVING_DEPENDENCIES}) => {
+const makeValueResolver: valueResolverFactory = (template) => (config, additionalDependencies = undefined, resolvingDependencies = {...DEFAULT_RESOLVING_DEPENDENCIES}) => {
     const dependencyMap: {[key: string]: string} = template
     
     .getDependencies()
@@ -77,9 +77,14 @@ const makeValueResolver: valueResolverFactory = (template) => (config, resolving
                 dependencyMap[dependency] = `[CIRCULAR DEPENDENCY ${dependency}]`;
             } else {
                 const unknownResolver = () => `[UNKNOWN DEPENDENCY ${dependency}]`;
+                const additionalDependencyResolver = () => {
+                    return additionalDependencies && additionalDependencies[dependency];
+                };
                 const resolver = (config.value && 
                 config.value[dependency] && 
-                config.value[dependency].value) || unknownResolver;
+                config.value[dependency].value) || 
+                (additionalDependencies && additionalDependencies[dependency] && additionalDependencyResolver) ||
+                unknownResolver;
                 dependencyMap[dependency] = resolver(config, resolvingDependencies);
             }
         }
@@ -121,16 +126,16 @@ export function mergeConfiguration(target: ConfigurationValueOld, source: any, s
     return target;
 }
 
-export function toJSON(root:ConfigurationValueOld, source: ConfigurationValueOld): any {
+export function toJSON(root:ConfigurationValueOld, source: ConfigurationValueOld, additionalDependencies?: {[key: string]: string}): any {
     if(isArray(source.value)) {
-        return (source.value as ConfigurationValueOld[]).map(v => toJSON(root, v));
+        return (source.value as ConfigurationValueOld[]).map(v => toJSON(root, v, additionalDependencies));
     } else if (isObject(source.value)) {
         return Object.keys(source.value).reduce((target, key) => {
-            target[key] = toJSON(root, source.value[key]);
+            target[key] = toJSON(root, source.value[key], additionalDependencies);
             return target;
         } ,{} as {[key:string]: any});
     } else {
-        return source.value(root);
+        return source.value(root, additionalDependencies);
     }
 }
 

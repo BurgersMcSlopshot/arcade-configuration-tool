@@ -15,7 +15,7 @@ function parseArgs(): ApplicationArgs {
     const commandLineConfig = process.argv.reduce((config, arg) => {
         if(arg.startsWith('-')) {
             if(capturingKey) {
-                config[capturingKey] = capturingValue ? capturingValue : true;
+                config[capturingKey] = capturingValue ? capturingValue : 'TRUE';
                 capturingKey = arg.substring(1);
                 capturingValue = undefined;
             } else {
@@ -25,10 +25,10 @@ function parseArgs(): ApplicationArgs {
             capturingValue = capturingValue ? + ' ' + arg : arg;
         }
         return config;
-    },{} as {[key: string]: string | boolean});
+    },{} as {[key: string]: string });
     
     if(capturingKey) {
-        commandLineConfig[capturingKey] = capturingValue ? capturingValue : true;
+        commandLineConfig[capturingKey] = capturingValue ? capturingValue : 'TRUE';
     }
     const {application, environment, groupVarsDirectory, applicationsDirectory, ...additionalArgs} = commandLineConfig;
     if(!application) {
@@ -57,7 +57,7 @@ withApplication(args)
             const {filename, configuration} = configFileTuple;
             return mergeConfiguration(wholeConfiguration, configuration, filename);
         },{sourceFile: "", value:{}});
-        console.log(JSON.stringify(toJSON(result, result), null, 2));
+        console.log(JSON.stringify(toJSON(result, result, args.additionalConfigurationParameters), null, 2));
     }, reason => {
         console.warn(`loading configuration failed: ${reason}`);
     }));
