@@ -8,8 +8,8 @@ import {Configuration, ApplicationArgs} from '../models/configuration'
 
 type NeptuneConfigurationFile = {filename: string, configuration: any}
 
-function resolveApplicationFiles(args: ApplicationArgs, files: string[]): string[] {
-    const {environment, application} = args
+function resolveApplicationFiles(application: string, args: ApplicationArgs, files: string[]): string[] {
+    const {environment} = args
     const applicationFile = `${application}.yml`
     const applicationFiles = [path.join(args.groupVarsDirectory, applicationFile), path.join(args.groupVarsDirectory, environment, applicationFile)];
     return files
@@ -139,9 +139,9 @@ export function toJSON(root:ConfigurationValueOld, source: ConfigurationValueOld
     }
 }
 
-export function getApplicatonConfigurations(args: ApplicationArgs, document: YAML.ast.Document): Promise<NeptuneConfigurationFile[]> {
+export function getApplicatonConfigurations(application: string, args: ApplicationArgs, document: YAML.ast.Document): Promise<NeptuneConfigurationFile[]> {
     const applicationFiles = getFilesFromApplication(document);
-    const files = resolveApplicationFiles(args, applicationFiles)
+    const files = resolveApplicationFiles(application, args, applicationFiles)
     return Promise.all(
         files.map(filename => {
         return fs.promises.readFile(filename)
@@ -152,8 +152,8 @@ export function getApplicatonConfigurations(args: ApplicationArgs, document: YAM
     }));
 }
 
-export function withApplication(args: ApplicationArgs): Promise<YAML.ast.Document> {
-    const applicationPath = path.join(args.applicationsDirectory, `${args.application}.yml`);
+export function withApplication(application: string, args: ApplicationArgs): Promise<YAML.ast.Document> {
+    const applicationPath = path.join(args.applicationsDirectory, `${application}.yml`);
     return fs.promises.realpath(applicationPath)
     .then(file => fs.promises.readFile(file))
     .then(document => YAML.parseDocument(document.toString()))

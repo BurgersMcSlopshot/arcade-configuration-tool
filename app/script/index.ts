@@ -2,12 +2,20 @@ import { withApplication, getApplicatonConfigurations, mergeConfiguration, toJSO
 import { ApplicationArgs, Configuration } from "./models/configuration";
 import process from 'process';
 import path from 'path';
+import fs from 'fs'
 
 const DEFAULT_CONFIG: Configuration = {
     applicationsDirectory: 'code/neptune-deploy/applications',
     groupVarsDirectory: 'code/neptune-deploy/group_vars',
 }
 
+function resolveApplicatonPattern(applicationDirectory: string, pattern: string): string[] {
+    const directory = fs.readdirSync(applicationDirectory)
+    return directory
+    .filter(f=>f.endsWith(".yml"))
+    .map(f=>f.substring(0, f.length-4))
+    .filter(f=>f.match(pattern));
+}
 
 function parseArgs(): ApplicationArgs {
     let capturingKey: string | undefined;
@@ -37,11 +45,15 @@ function parseArgs(): ApplicationArgs {
     if(!environment) {
         throw '-environment is a required argument';
     }
+
+    const resolvedApplicationDirectory = (applicationsDirectory || path.join(process.env.HOME || '', DEFAULT_CONFIG.applicationsDirectory)).toString();
+    const applications = resolveApplicatonPattern(resolvedApplicationDirectory, application);
+
     return {
-        application: application.toString(),
+        applications,
         environment: environment.toString(),
         groupVarsDirectory: (groupVarsDirectory || path.join(process.env.HOME || '', DEFAULT_CONFIG.groupVarsDirectory)).toString(),
-        applicationsDirectory: (applicationsDirectory || path.join(process.env.HOME || '', DEFAULT_CONFIG.applicationsDirectory)).toString(),
+        applicationsDirectory: resolvedApplicationDirectory,
         additionalConfigurationParameters: {
             env: environment,
             ...additionalArgs,
@@ -50,14 +62,15 @@ function parseArgs(): ApplicationArgs {
 }
 
 const args = parseArgs();
-withApplication(args)
-.then(document => getApplicatonConfigurations(args, document)
+args.applications.map(application => 
+withApplication(application, args)
+.then(document => getApplicatonConfigurations(application, args, document)
     .then(configurations => {
         const result = configurations.reduce((wholeConfiguration, configFileTuple) => {
             const {filename, configuration} = configFileTuple;
             return mergeConfiguration(wholeConfiguration, configuration, filename);
         },{sourceFile: "", value:{}});
-        console.log(JSON.stringify(toJSON(result, result, args.additionalConfigurationParameters), null, 2));
+        fs.writeFileSync(`${application}.${args.environment}.json`, JSON.stringify(toJSON(result, result, args.additionalConfigurationParameters), null, 2));
     }, reason => {
         console.warn(`loading configuration failed: ${reason}`);
-    }));
+    })));

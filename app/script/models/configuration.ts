@@ -1,5 +1,5 @@
 export interface ApplicationArgs {
-    application: string,
+    applications: string[],
     environment: string,
     applicationsDirectory: string,
     groupVarsDirectory: string,
